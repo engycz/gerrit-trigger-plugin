@@ -37,7 +37,6 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +55,7 @@ public class GerritProjectListUpdater extends Thread implements ConnectionListen
     public static final String GERRIT_LS_PROJECTS = "gerrit ls-projects";
     private static final int MAX_WAIT_TIME = 64;
 
-    private AtomicBoolean connected = new AtomicBoolean(false);
+    private boolean connected = false;
     private boolean shutdown = false;
     private static final Logger logger = LoggerFactory.getLogger(GerritProjectListUpdater.class);
     private List<String> gerritProjects;
@@ -84,7 +83,7 @@ public class GerritProjectListUpdater extends Thread implements ConnectionListen
         GerritServer server = plugin.getServer(serverName);
         if (server != null) {
             server.addListener(this.connectionListener());
-            connected.set(server.isConnected());
+            setConnected(server.isConnected());
         } else {
             logger.error("Could not find the server {}", serverName);
         }
@@ -109,7 +108,6 @@ public class GerritProjectListUpdater extends Thread implements ConnectionListen
     @Override
     public synchronized void connectionEstablished() {
         setConnected(true);
-        notify();
     }
 
     @Override
@@ -289,14 +287,19 @@ public class GerritProjectListUpdater extends Thread implements ConnectionListen
      * @return if connected to Gerrit.
      */
     public synchronized boolean isConnected() {
-        return connected.get();
+        return connected;
     }
 
     /**
      * @param connected the connected to set.
      */
     public synchronized void setConnected(boolean connected) {
-        this.connected.set(connected);
+        if (!this.connected && connected) {
+            this.connected = connected;
+            notify();
+        } else {
+            this.connected = connected;
+        }
     }
 
     /**

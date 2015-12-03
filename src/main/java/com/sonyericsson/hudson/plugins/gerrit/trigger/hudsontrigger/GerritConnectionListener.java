@@ -76,7 +76,7 @@ public class GerritConnectionListener implements ConnectionListener {
      *
      * @return whether it is connected
      */
-    public boolean isConnected() {
+    public synchronized boolean isConnected() {
         return connected;
     }
 
@@ -85,8 +85,9 @@ public class GerritConnectionListener implements ConnectionListener {
      *
      * @param connected the connection status
      */
-    public void setConnected(boolean connected) {
+    public synchronized void setConnected(boolean connected) {
         this.connected = connected;
+        checkGerritVersionFeatures();
     }
 
     /**
@@ -112,8 +113,7 @@ public class GerritConnectionListener implements ConnectionListener {
      */
     @Override
     public void connectionEstablished() {
-        connected = true;
-        checkGerritVersionFeatures();
+        setConnected(true);
     }
 
     /**
@@ -121,8 +121,7 @@ public class GerritConnectionListener implements ConnectionListener {
      */
     @Override
     public void connectionDown() {
-        connected = false;
-        checkGerritVersionFeatures();
+        setConnected(false);
     }
 
     /**
@@ -152,7 +151,7 @@ public class GerritConnectionListener implements ConnectionListener {
      * It should be called whenever we got some new connection status.
      */
     public void checkGerritVersionFeatures() {
-        if (connected) {
+        if (isConnected()) {
             GerritVersionNumber version =
                     GerritVersionChecker.createVersionNumber(getVersionString());
             List<GerritVersionChecker.Feature> list = new LinkedList<GerritVersionChecker.Feature>();

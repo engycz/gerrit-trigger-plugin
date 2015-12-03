@@ -422,8 +422,10 @@ public class GerritServer implements Describable<GerritServer>, Action {
      */
     private void initializeConnectionListener() {
         gerritConnectionListener = new GerritConnectionListener(name);
+
         addListener(gerritConnectionListener);
         gerritConnectionListener.setConnected(isConnected());
+
         gerritConnectionListener.checkGerritVersionFeatures();
     }
 
@@ -512,10 +514,15 @@ public class GerritServer implements Describable<GerritServer>, Action {
             if (gerritConnection == null) {
                 logger.debug("Starting Gerrit connection...");
                 gerritConnection = new GerritConnection(name, config);
+
                 gerritEventManager.setIgnoreEMail(name, config.getGerritEMail());
                 gerritConnection.setHandler(gerritEventManager);
+
                 gerritConnection.addListener(gerritConnectionListener);
+                gerritConnectionListener.setConnected(isConnected());
+
                 gerritConnection.addListener(projectListUpdater);
+                projectListUpdater.setConnected(isConnected());
 
                 missedEventsPlaybackManager.checkIfEventsLogPluginSupported();
                 gerritConnection.addListener(missedEventsPlaybackManager);
@@ -535,6 +542,7 @@ public class GerritServer implements Describable<GerritServer>, Action {
         if (gerritConnection != null) {
             gerritConnection.shutdown(true);
             gerritConnection.removeListener(gerritConnectionListener);
+            gerritConnection.removeListener(projectListUpdater);
             gerritConnection.removeListener(missedEventsPlaybackManager);
             gerritConnection = null;
             gerritEventManager.setIgnoreEMail(name, null);
